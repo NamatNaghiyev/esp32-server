@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from pydantic import BaseModel
 from datetime import datetime
 import json
@@ -60,3 +60,44 @@ def receive_data(sensor: SensorData):
 @app.get("/api/data")
 def get_data():
     return load_data()
+
+
+@app.get("/api/data/latest")
+def get_latest_data():
+    data = load_data()
+    content = data.get("content", [])
+
+    if not content:
+        return {"status": "empty", "message": "Hələ data yoxdur"}
+
+    return {
+        "status": "success",
+        "latest": content[-1]
+    }
+
+
+@app.get("/api/data/by-date")
+def get_data_by_date(date: str = Query(..., description="Format: YYYY-MM-DD")):
+    data = load_data()
+    content = data.get("content", [])
+
+    filtered = [
+        item for item in content
+        if item.get("timestamp", "").startswith(date)
+    ]
+
+    return {
+        "status": "success",
+        "date": date,
+        "count": len(filtered),
+        "content": filtered
+    }
+
+
+@app.delete("/api/data")
+def clear_data():
+    save_data({"content": []})
+    return {
+        "status": "success",
+        "message": "Bütün data silindi"
+    }
